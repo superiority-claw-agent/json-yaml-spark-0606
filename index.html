@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="description"
+      content="Convert JSON to YAML and YAML to JSON locally in your browser with validation, examples, and copy-ready output."
+    />
+    <title>JSON ⇄ YAML Spark</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="background-orb orb-a"></div>
+      <div class="background-orb orb-b"></div>
+
+      <header class="hero card">
+        <div>
+          <p class="eyebrow">Browser-first converter</p>
+          <h1>JSON ⇄ YAML Spark</h1>
+          <p class="hero-copy">
+            Convert, validate, and copy structured data without sending it to a server.
+          </p>
+        </div>
+        <div class="hero-meta">
+          <span class="meta-pill">Static app</span>
+          <span class="meta-pill">Privacy preserving</span>
+          <span class="meta-pill">375px+ responsive</span>
+        </div>
+      </header>
+
+      <main class="app-grid">
+        <section class="toolbar card" aria-label="Conversion controls">
+          <div class="toolbar-row">
+            <div class="field-group">
+              <span class="field-label">Direction</span>
+              <div class="segmented-control" role="tablist" aria-label="Conversion direction">
+                <button
+                  class="segment-button"
+                  id="direction-json-to-yaml"
+                  type="button"
+                  data-direction="json-to-yaml"
+                  role="tab"
+                  aria-selected="true"
+                >
+                  JSON → YAML
+                </button>
+                <button
+                  class="segment-button"
+                  id="direction-yaml-to-json"
+                  type="button"
+                  data-direction="yaml-to-json"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  YAML → JSON
+                </button>
+              </div>
+            </div>
+
+            <div class="field-group indent-group">
+              <label class="field-label" for="indent-select" id="indent-label">YAML indentation</label>
+              <select id="indent-select" class="indent-select"></select>
+            </div>
+
+            <div class="toolbar-actions">
+              <button type="button" class="ghost-button" id="toggle-examples">
+                Examples
+              </button>
+              <button type="button" class="primary-button" id="convert-button">
+                Convert
+              </button>
+            </div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-chip" id="validation-chip">Paste JSON or YAML, or load an example to start</div>
+            <p class="toolbar-note" id="toolbar-note">
+              Target format settings persist in this browser.
+            </p>
+          </div>
+        </section>
+
+        <section
+          class="examples-panel card"
+          id="examples-panel"
+          aria-labelledby="examples-heading"
+          hidden
+        >
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Starter content</p>
+              <h2 id="examples-heading">Examples</h2>
+            </div>
+            <p class="section-copy">
+              Loading an example replaces the current source text and switches direction if needed.
+            </p>
+          </div>
+          <div class="example-list" id="example-list"></div>
+        </section>
+
+        <section class="workspace">
+          <article class="panel card">
+            <div class="section-header">
+              <div>
+                <p class="eyebrow">Source</p>
+                <h2 id="source-heading">JSON input</h2>
+              </div>
+              <p class="section-copy" id="source-help">
+                Paste JSON to validate before converting it into YAML.
+              </p>
+            </div>
+
+            <label class="sr-only" for="source-input">Source input</label>
+            <textarea
+              id="source-input"
+              class="editor"
+              spellcheck="false"
+              placeholder=""
+              aria-describedby="source-footer"
+            ></textarea>
+            <div class="panel-footer" id="source-footer">
+              Validation updates as you type. Conversion remains an explicit action.
+            </div>
+          </article>
+
+          <article class="panel card">
+            <div class="section-header">
+              <div>
+                <p class="eyebrow">Output</p>
+                <h2 id="output-heading">YAML output</h2>
+              </div>
+              <button type="button" class="ghost-button" id="copy-button" disabled>
+                Copy output
+              </button>
+            </div>
+
+            <label class="sr-only" for="output-text">Converted output</label>
+            <textarea
+              id="output-text"
+              class="editor output-editor"
+              spellcheck="false"
+              readonly
+              placeholder="Converted output appears here after a successful run."
+            ></textarea>
+            <div class="panel-footer" id="output-footer">
+              Output stays in place until the next successful conversion.
+            </div>
+          </article>
+        </section>
+
+        <section
+          class="error-panel card"
+          id="error-panel"
+          aria-live="polite"
+          hidden
+        >
+          <div class="error-header">
+            <div>
+              <p class="eyebrow error-eyebrow">Recovery</p>
+              <h2>Input could not be parsed</h2>
+            </div>
+            <span class="error-location" id="error-location"></span>
+          </div>
+          <p class="error-summary" id="error-summary"></p>
+          <p class="error-hint" id="error-hint"></p>
+          <details class="error-details">
+            <summary>Show raw parser details</summary>
+            <pre id="error-raw"></pre>
+          </details>
+        </section>
+
+        <div class="live-region sr-only" id="live-region" aria-live="polite"></div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

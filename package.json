@@ -1,0 +1,16 @@
+{
+  "name": "json-yaml-spark-0606",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "vite": "^7.1.12"
+  }
+}
