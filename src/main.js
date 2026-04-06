@@ -1,46 +1,21 @@
 import { copyText } from './lib/clipboard.js';
-import { convertDocument, validateSource } from './lib/converter.js';
-import { EXAMPLES, getExampleById } from './lib/examples.js';
+import {
+  applyConvert,
+  applyDirectionChange,
+  applyExampleLoad,
+  applySourceInput,
+  createInitialState,
+  getFormats,
+  getTargetIndent
+} from './lib/app-state.js';
+import { EXAMPLES } from './lib/examples.js';
 import {
   INDENT_OPTIONS,
   loadPreferences,
   savePreferences
 } from './lib/preferences.js';
 
-const DIRECTION_CONFIG = {
-  'json-to-yaml': {
-    sourceFormat: 'json',
-    targetFormat: 'yaml',
-    sourceHeading: 'JSON input',
-    targetHeading: 'YAML output',
-    sourceHelp: 'Paste JSON to validate before converting it into YAML.',
-    placeholder:
-      'Paste JSON here, or open the Examples panel to load a working snippet.'
-  },
-  'yaml-to-json': {
-    sourceFormat: 'yaml',
-    targetFormat: 'json',
-    sourceHeading: 'YAML input',
-    targetHeading: 'JSON output',
-    sourceHelp: 'Paste YAML to validate before converting it into JSON.',
-    placeholder:
-      'Paste YAML here, or open the Examples panel to load a working snippet.'
-  }
-};
-
-const state = {
-  direction: 'json-to-yaml',
-  preferences: loadPreferences(),
-  sourceText: '',
-  outputText: '',
-  validation: {
-    ok: null,
-    error: null
-  },
-  examplesOpen: false,
-  statusMessage: '',
-  statusTone: 'neutral'
-};
+let state = createInitialState(loadPreferences());
 
 const elements = {
   directionButtons: Array.from(document.querySelectorAll('[data-direction]')),
@@ -74,37 +49,6 @@ function announce(message) {
   }, 10);
 }
 
-function getFormats() {
-  return DIRECTION_CONFIG[state.direction];
-}
-
-function getTargetIndent() {
-  const { targetFormat } = getFormats();
-  return targetFormat === 'json'
-    ? state.preferences.jsonIndent
-    : state.preferences.yamlIndent;
-}
-
-function setDirection(direction, announceChange = false) {
-  state.direction = direction;
-  updateValidation();
-
-  if (announceChange) {
-    const { sourceFormat, targetFormat } = getFormats();
-    announce(`Direction changed to ${sourceFormat.toUpperCase()} to ${targetFormat.toUpperCase()}.`);
-  }
-
-  render();
-}
-
-function updateValidation() {
-  const { sourceFormat } = getFormats();
-  state.validation = validateSource({
-    sourceText: state.sourceText,
-    sourceFormat
-  });
-}
-
 function setStatus(message, tone = 'neutral', shouldAnnounce = false) {
   state.statusMessage = message;
   state.statusTone = tone;
@@ -115,15 +59,11 @@ function setStatus(message, tone = 'neutral', shouldAnnounce = false) {
 }
 
 function handleSourceInput(event) {
-  state.sourceText = event.target.value;
-  updateValidation();
+  const { nextState, announcement } = applySourceInput(state, event.target.value);
+  state = nextState;
 
-  if (state.validation.ok === false) {
-    setStatus('Source has parse errors. Fix the input before converting.', 'error');
-  } else if (state.validation.ok === true) {
-    setStatus('Input is valid', 'success');
-  } else {
-    setStatus('', 'neutral');
+  if (announcement) {
+    announce(announcement);
   }
 
   render();
@@ -137,36 +77,19 @@ async function handleCopy() {
 }
 
 function handleConvert() {
-  const { sourceFormat, targetFormat } = getFormats();
-  const result = convertDocument({
-    sourceText: state.sourceText,
-    sourceFormat,
-    targetFormat,
-    targetIndent: getTargetIndent()
-  });
+  const { nextState, announcement } = applyConvert(state);
+  state = nextState;
 
-  if (!result.ok) {
-    state.validation = {
-      ok: false,
-      error: result.error
-    };
-    setStatus('Source has parse errors. Fix the input before converting.', 'error', true);
-    render();
-    return;
+  if (announcement) {
+    announce(announcement);
   }
 
-  state.outputText = result.outputText;
-  state.validation = {
-    ok: true,
-    error: null
-  };
-  setStatus(`${targetFormat.toUpperCase()} output is ready.`, 'success', true);
   render();
 }
 
 function handleIndentChange(event) {
   const value = Number(event.target.value);
-  const { targetFormat } = getFormats();
+  const { targetFormat } = getFormats(state);
   const nextPreferences = {
     ...state.preferences,
     ...(targetFormat === 'json'
@@ -180,22 +103,13 @@ function handleIndentChange(event) {
 }
 
 function handleExampleLoad(exampleId) {
-  const example = getExampleById(exampleId);
+  const { nextState, announcement } = applyExampleLoad(state, exampleId);
+  state = nextState;
 
-  if (!example) {
-    return;
+  if (announcement) {
+    announce(announcement);
   }
 
-  const nextDirection = example.format === 'json' ? 'json-to-yaml' : 'yaml-to-json';
-  state.direction = nextDirection;
-  state.sourceText = example.content;
-  state.examplesOpen = false;
-  updateValidation();
-  setStatus(
-    `Loaded ${example.title}. Direction updated for ${example.format.toUpperCase()} input.`,
-    'success',
-    true
-  );
   render();
 }
 
@@ -226,8 +140,8 @@ function renderExamples() {
 }
 
 function render() {
-  const config = getFormats();
-  const currentIndent = getTargetIndent();
+  const config = getFormats(state);
+  const currentIndent = getTargetIndent(state);
 
   for (const button of elements.directionButtons) {
     const isActive = button.dataset.direction === state.direction;
@@ -240,6 +154,7 @@ function render() {
   elements.outputHeading.textContent = config.targetHeading;
   elements.sourceInput.placeholder = config.placeholder;
   elements.sourceInput.value = state.sourceText;
+  elements.sourceInput.setAttribute('aria-invalid', state.validation.ok === false ? 'true' : 'false');
   elements.outputText.value = state.outputText;
 
   elements.indentLabel.textContent = `${config.targetFormat.toUpperCase()} indentation`;
@@ -301,7 +216,16 @@ function render() {
 
 function bindEvents() {
   for (const button of elements.directionButtons) {
-    button.addEventListener('click', () => setDirection(button.dataset.direction, true));
+    button.addEventListener('click', () => {
+      const { nextState, announcement } = applyDirectionChange(state, button.dataset.direction);
+      state = nextState;
+
+      if (announcement) {
+        announce(announcement);
+      }
+
+      render();
+    });
   }
 
   elements.sourceInput.addEventListener('input', handleSourceInput);
@@ -316,5 +240,4 @@ function bindEvents() {
 
 renderExamples();
 bindEvents();
-updateValidation();
 render();
